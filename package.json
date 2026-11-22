@@ -1,0 +1,24 @@
+{
+  "name": "waiting-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "식당 원격 웨이팅 서비스 (웹서비스설계 Term Project)",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "test": "node --test tests/*.test.js",
+    "client:install": "npm --prefix client ci",
+    "client:dev": "npm --prefix client run dev",
+    "build": "npm --prefix client ci && npm --prefix client run build",
+    "db:reset": "node --env-file-if-exists=.env scripts/reset-db.js",
+    "db:seed": "node --env-file-if-exists=.env scripts/seed.js"
+  },
+  "dependencies": {
+    "express": "5.3.0",
+    "jsonwebtoken": "9.0.3"
+  }
+}

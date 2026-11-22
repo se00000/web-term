@@ -1,0 +1,148 @@
+:root {
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --text: #1d1d1f;
+  --muted: #6b6b70;
+  --line: #e4e2dd;
+  --brand: #e8590c;
+  --brand-ink: #ffffff;
+  --brand-soft: #fff0e6;
+  --ok: #2b8a3e;
+  --ok-soft: #e9f7ec;
+  --danger: #c92a2a;
+  --danger-soft: #fdecec;
+  --called: #1971c2;
+  --called-soft: #e7f1fb;
+  --radius: 14px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141416;
+    --surface: #1f1f23;
+    --text: #ececef;
+    --muted: #9c9ca3;
+    --line: #2e2e34;
+    --brand: #ff7a33;
+    --brand-soft: #3a2417;
+    --ok: #51cf66;
+    --ok-soft: #1c3322;
+    --danger: #ff6b6b;
+    --danger-soft: #3a1f1f;
+    --called: #4dabf7;
+    --called-soft: #172a3d;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  line-height: 1.5;
+}
+h1 { font-size: 1.5rem; margin: 0.25rem 0 0.75rem; }
+h2 { font-size: 1.1rem; margin: 0 0 0.75rem; }
+a { color: var(--brand); }
+
+/* ---- 레이아웃 ---- */
+.topbar { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+.topbar-inner { max-width: 760px; margin: 0 auto; padding: 0.75rem 16px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.brand { font-weight: 800; font-size: 1.2rem; color: var(--brand); text-decoration: none; letter-spacing: -0.02em; }
+nav { display: flex; gap: 0.25rem; align-items: center; flex-wrap: wrap; }
+nav a, nav .link { color: var(--muted); text-decoration: none; padding: 0.35rem 0.6rem; border-radius: 8px; font-size: 0.95rem; }
+nav a.active { color: var(--text); background: var(--bg); font-weight: 600; }
+.container { max-width: 760px; margin: 0 auto; padding: 1rem 16px 4rem; }
+.whoami { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.5rem; text-align: right; }
+
+.card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; margin-bottom: 1rem; color: inherit; text-decoration: none; }
+.narrow { max-width: 420px; margin: 1.5rem auto; }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.center { text-align: center; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; margin: 0.15rem 0 0; }
+.back { display: inline-block; margin-bottom: 0.75rem; text-decoration: none; color: var(--muted); }
+
+/* ---- 폼 ---- */
+label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.85rem; }
+input, select {
+  display: block; width: 100%; margin-top: 0.35rem; padding: 0.65rem 0.75rem;
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px;
+}
+input:focus, select:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+.inline-form { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; }
+.inline-form label { margin: 0; min-width: 120px; }
+.subform { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+
+button, .button {
+  font: inherit; font-weight: 600; cursor: pointer; display: inline-block; text-decoration: none;
+  padding: 0.6rem 1rem; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--text);
+}
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+button.danger.ghost { background: transparent; color: var(--danger); }
+button.link { background: none; border: none; font-weight: 400; cursor: pointer; }
+form.card > button.primary { width: 100%; padding: 0.75rem; }
+.button-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+
+.error { color: var(--danger); font-size: 0.92rem; margin: 0.5rem 0; }
+.alert { background: var(--danger-soft); color: var(--danger); border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 1rem; font-size: 0.93rem; }
+.alert.ok { background: var(--ok-soft); color: var(--ok); }
+
+/* ---- 매장 목록 ---- */
+.store-list { list-style: none; padding: 0; margin: 0; }
+.store-card { display: flex; justify-content: space-between; align-items: center; gap: 1rem; transition: border-color 0.15s; }
+.store-card:hover { border-color: var(--brand); }
+.store-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; white-space: nowrap; }
+.count { color: var(--muted); font-size: 0.9rem; }
+.count b { color: var(--text); font-size: 1.3rem; margin-right: 2px; }
+
+.badge { font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 999px; background: var(--bg); color: var(--muted); white-space: nowrap; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.off { background: var(--bg); color: var(--muted); }
+
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
+.stat { background: var(--bg); border-radius: 10px; padding: 0.6rem; text-align: center; }
+.stat span { display: block; font-size: 0.8rem; color: var(--muted); }
+.stat b { font-size: 1.1rem; }
+
+/* ---- 내 웨이팅 번호표 ---- */
+.ticket { text-align: center; padding: 1.75rem 1.2rem; border-top: 6px solid var(--line); }
+.ticket.status-waiting { border-top-color: var(--brand); }
+.ticket.status-called { border-top-color: var(--called); background: var(--called-soft); }
+.ticket.status-seated { border-top-color: var(--ok); }
+.ticket-no { font-size: 4.5rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; margin: 0.5rem 0; }
+.ticket-no small { font-size: 1.4rem; margin-left: 4px; }
+.ticket-status { font-weight: 700; font-size: 1.15rem; margin: 0.25rem 0 0.75rem; }
+.ahead { font-size: 1.05rem; margin: 0 0 1rem; }
+.ahead b { color: var(--brand); font-size: 1.3rem; }
+.ahead.called { color: var(--called); font-weight: 700; }
+.facts { display: flex; justify-content: center; gap: 1.5rem; margin: 0 0 1.25rem; }
+.facts dt { font-size: 0.8rem; color: var(--muted); }
+.facts dd { margin: 0; font-weight: 600; }
+
+/* ---- 직원 대시보드 ---- */
+.tabs { display: flex; gap: 0.4rem; margin-bottom: 1rem; overflow-x: auto; }
+.tab.active { background: var(--text); color: var(--surface); border-color: var(--text); }
+.queue { list-style: none; padding: 0; margin: 0; }
+.queue-item { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 0; border-top: 1px solid var(--line); }
+.queue-item:first-child { border-top: none; }
+.queue-no { flex: 0 0 auto; width: 2.75rem; height: 2.75rem; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 1.15rem; background: var(--brand-soft); color: var(--brand); }
+.queue-item.status-called .queue-no { background: var(--called-soft); color: var(--called); }
+.queue-info { flex: 1; min-width: 0; }
+.queue-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+.queue.compact .queue-no { background: var(--bg); color: var(--muted); width: 2.25rem; height: 2.25rem; font-size: 0.95rem; }
+
+@media (max-width: 520px) {
+  .queue-item { flex-wrap: wrap; }
+  .queue-actions { width: 100%; justify-content: stretch; }
+  .queue-actions button { flex: 1; }
+  .stat-row { grid-template-columns: repeat(3, 1fr); }
+  .ticket-no { font-size: 3.75rem; }
+}
