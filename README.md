@@ -4,6 +4,7 @@
 
 > 손님이 식당에 가지 않고도 웨이팅을 등록해 순번을 받고, 매장 직원이 선착순으로 호출·입장·노쇼를 처리하는 서비스입니다.
 
+- 저장소: https://github.com/se00000/web-term
 - 보고서: [docs/report.pdf](docs/report.pdf) *(작성 예정)*
 - 배포 주소: *(JCloud 배포 후 기재)*
 
