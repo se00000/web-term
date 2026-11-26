@@ -16,6 +16,7 @@ export const toWaitingDto = w => w && ({
   storeId: w.store_id,
   storeName: w.store_name,
   storeCategory: w.store_category,
+  storeMaxParty: w.store_max_party,
   userId: w.user_id,
   customerName: w.customer_name,
   serviceDate: w.service_date,
@@ -28,7 +29,7 @@ export const toWaitingDto = w => w && ({
 });
 
 export function createWaitingService({ db, tx, now }) {
-  const selectWaiting = `SELECT w.*, s.name AS store_name, s.category AS store_category, u.name AS customer_name
+  const selectWaiting = `SELECT w.*, s.name AS store_name, s.category AS store_category, s.max_party AS store_max_party, u.name AS customer_name
                            FROM waitings w JOIN stores s ON s.id = w.store_id JOIN users u ON u.id = w.user_id`;
   const getWaiting = id => db.prepare(`${selectWaiting} WHERE w.id = ?`).get(id);
   const getStore = id => db.prepare('SELECT * FROM stores WHERE id = ?').get(id);
@@ -123,6 +124,38 @@ export function createWaitingService({ db, tx, now }) {
       });
     },
 
+    /**
+     * 손님: 대기 중인 본인 웨이팅의 인원 변경.
+     * - 본인 웨이팅만, WAITING 상태에서만 (호출된 뒤에는 매장이 자리를 준비하므로 변경 불가)
+     * - 1명 ~ 매장 최대 인원
+     * - 순번은 그대로 유지
+     * 변경과 변경 이력 저장은 하나의 트랜잭션입니다.
+     */
+    changePartySize(actor, waitingId, partySize) {
+      return tx(() => {
+        const w = getWaiting(waitingId);
+        if (!w) throw notFound('웨이팅');
+        if (w.user_id !== actor.id) throw forbidden('본인 웨이팅만 변경할 수 있습니다.');
+        if (w.status !== 'WAITING') {
+          throw invalidState(w.status === 'CALLED'
+            ? '이미 호출된 웨이팅은 인원을 바꿀 수 없습니다. 매장에 직접 말씀해주세요.'
+            : '이미 종료된 웨이팅입니다.');
+        }
+        const store = getStore(w.store_id);
+        if (partySize > store.max_party) throw badInput(`이 매장은 최대 ${store.max_party}명까지 웨이팅할 수 있습니다.`);
+
+        if (partySize !== w.party_size) {
+          // 상태를 WHERE에 함께 걸어, 확인 직후 호출된 경우에는 바뀌지 않게 합니다.
+          const r = db.prepare(`UPDATE waitings SET party_size = ? WHERE id = ? AND status = 'WAITING'`).run(partySize, w.id);
+          if (r.changes !== 1) throw invalidState();
+          db.prepare(`INSERT INTO waiting_edits (waiting_id, actor_id, field, old_value, new_value, created_at)
+                      VALUES (?, ?, 'party_size', ?, ?, ?)`).run(w.id, actor.id, String(w.party_size), String(partySize), iso(now()));
+        }
+        const updated = getWaiting(w.id);
+        return { ...toWaitingDto(updated), aheadCount: positionOf(updated) };
+      });
+    },
+
     /** 손님: 내 진행 중 웨이팅 + 내 앞 대기 팀 수 */
     mine(actor) {
       const w = db.prepare(`${selectWaiting} WHERE w.user_id = ? ORDER BY w.id DESC LIMIT 1`).get(actor.id);
@@ -212,8 +245,12 @@ export function createWaitingService({ db, tx, now }) {
       if (!w) throw notFound('웨이팅');
       const store = getStore(w.store_id);
       if (w.user_id !== actor.id && store.owner_id !== actor.id) throw forbidden();
-      return db.prepare(`SELECT action, from_status AS fromStatus, to_status AS toStatus, actor_id AS actorId, created_at AS createdAt
-                           FROM waiting_logs WHERE waiting_id = ? ORDER BY id`).all(w.id);
+      // 상태 변경 이력과 인원 변경 이력을 시간순으로 합쳐서 보여줍니다.
+      const statusLogs = db.prepare(`SELECT action, from_status AS fromStatus, to_status AS toStatus, actor_id AS actorId, created_at AS createdAt
+                                      FROM waiting_logs WHERE waiting_id = ? ORDER BY id`).all(w.id);
+      const edits = db.prepare(`SELECT 'PARTY_SIZE' AS action, old_value AS oldValue, new_value AS newValue, actor_id AS actorId, created_at AS createdAt
+                                 FROM waiting_edits WHERE waiting_id = ? ORDER BY id`).all(w.id);
+      return [...statusLogs, ...edits].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     },
   };
 }

@@ -12,6 +12,8 @@ export default function MyWaitingPage() {
   const { data, error, loading, reload } = usePolling(() => api('/me/waiting'), 5000);
   const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [notice, setNotice] = useState('');
   const w = data?.waiting;
 
   async function cancel() {
@@ -80,8 +82,22 @@ export default function MyWaitingPage() {
 
           <div className="ticket-cut" aria-hidden="true" />
 
+          {editing && w.status === 'WAITING' && (
+            <PartySizeEditor waiting={w}
+              onDone={async message => { setEditing(false); setActionError(''); setNotice(message); await reload(); }}
+              onCancel={() => setEditing(false)} />
+          )}
+
           <dl className="ticket-facts">
-            <div><dt>인원</dt><dd>{w.partySize}명</dd></div>
+            <div>
+              <dt>인원</dt>
+              <dd>
+                {w.partySize}명
+                {w.status === 'WAITING' && !editing && (
+                  <button type="button" className="fact-edit" onClick={() => { setNotice(''); setEditing(true); }}>변경</button>
+                )}
+              </dd>
+            </div>
             <div><dt>등록</dt><dd>{formatTime(w.createdAt)}</dd></div>
             <div><dt>{w.finishedAt ? '종료' : '상태'}</dt><dd>{w.finishedAt ? formatTime(w.finishedAt) : STATUS_LABEL[w.status]}</dd></div>
           </dl>
@@ -91,6 +107,7 @@ export default function MyWaitingPage() {
               ? <button type="button" className="text-danger" onClick={cancel} disabled={busy}>{busy ? '취소 중…' : '웨이팅 취소하기'}</button>
               : <Link to="/" className="cta-button">다른 매장 둘러보기</Link>}
             {actionError && <p className="error">{actionError}</p>}
+            {notice && <p className="ok-note">{notice}</p>}
             <p className="refresh-note">5초마다 자동으로 새로고침돼요</p>
           </div>
         </article>
@@ -106,6 +123,46 @@ export default function MyWaitingPage() {
         </aside>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 인원 변경 (대기 중일 때만). 순번은 그대로 유지됩니다.
+ * 저장 직전에 매장이 호출하면 서버가 409로 거절하고, 그 이유를 보여줍니다.
+ */
+function PartySizeEditor({ waiting, onDone, onCancel }) {
+  const max = waiting.storeMaxParty;
+  const [size, setSize] = useState(waiting.partySize);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function save() {
+    if (size === waiting.partySize) { onCancel(); return; }
+    setBusy(true);
+    setError('');
+    try {
+      await api(`/waitings/${waiting.id}`, { method: 'PATCH', body: { partySize: size } });
+      await onDone(`인원을 ${size}명으로 바꿨어요. 순번은 그대로예요.`);
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="party-editor">
+      <p className="party-editor-title">인원 변경 <span>최대 {max}명 · 순번은 그대로 유지돼요</span></p>
+      <div className="party-editor-row">
+        <div className="stepper" role="group" aria-label="인원">
+          <button type="button" onClick={() => setSize(Math.max(1, size - 1))} disabled={size <= 1 || busy} aria-label="인원 줄이기">−</button>
+          <span aria-live="polite"><b>{size}</b>명</span>
+          <button type="button" onClick={() => setSize(Math.min(max, size + 1))} disabled={size >= max || busy} aria-label="인원 늘리기">+</button>
+        </div>
+        <button type="button" onClick={onCancel} disabled={busy}>취소</button>
+        <button type="button" className="primary" onClick={save} disabled={busy}>{busy ? '저장 중…' : '저장'}</button>
+      </div>
+      {error && <p className="error">{error}</p>}
     </div>
   );
 }

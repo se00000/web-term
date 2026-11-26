@@ -75,6 +75,17 @@ CREATE TABLE IF NOT EXISTS waiting_logs (
   to_status   TEXT NOT NULL CHECK (to_status ${statusCheck}),
   created_at  TEXT NOT NULL
 );
+
+-- 상태가 아닌 값(인원 등)의 변경 이력. 누가 언제 무엇을 바꿨는지 남깁니다.
+CREATE TABLE IF NOT EXISTS waiting_edits (
+  id          INTEGER PRIMARY KEY,
+  waiting_id  INTEGER NOT NULL REFERENCES waitings(id),
+  actor_id    INTEGER NOT NULL REFERENCES users(id),
+  field       TEXT NOT NULL CHECK (field IN ('party_size')),
+  old_value   TEXT NOT NULL,
+  new_value   TEXT NOT NULL,
+  created_at  TEXT NOT NULL
+);
 `;
 
 export function openDb(path = process.env.DB_PATH || defaultDbPath) {

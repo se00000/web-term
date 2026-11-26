@@ -105,6 +105,11 @@ export function createApp({ db, secret, now = () => new Date() }) {
     res.status(201).location(`/api/waitings/${w.id}`).json(w);
   });
   app.get('/api/me/waiting', auth.required, (req, res) => res.json({ waiting: waitings.mine(req.user) }));
+  // 대기 중인 본인 웨이팅의 인원 변경 (순번 유지)
+  app.patch('/api/waitings/:id', auth.required, (req, res) => {
+    const b = body(req, ['partySize']);
+    res.json(waitings.changePartySize(req.user, id(req.params.id), int(b.partySize, '인원', 1, 20)));
+  });
   app.post('/api/waitings/:id/cancel', auth.required, (req, res) => {
     body(req, []);
     res.json(waitings.cancel(req.user, id(req.params.id)));

@@ -679,3 +679,19 @@ select {
 @media (max-width: 520px) {
   .promo-art { display: none; }
 }
+
+/* ---------- 인원 변경 (번호표) ---------- */
+.fact-edit {
+  height: auto; margin-left: 0.4rem; padding: 0.1rem 0.45rem; border-radius: 6px;
+  font-size: 0.75rem; font-weight: 700; background: var(--bg-sub); color: var(--text-2); vertical-align: 2px;
+}
+.fact-edit:hover { background: var(--bg-press); color: var(--text); }
+.party-editor { margin: 1rem 1.25rem 0; padding: 1rem; border-radius: var(--radius); background: var(--bg-sub); }
+.party-editor-title { font-weight: 800; font-size: 0.92rem; margin-bottom: 0.65rem; }
+.party-editor-title span { display: block; font-weight: 500; font-size: 0.8rem; color: var(--muted); margin-top: 0.1rem; }
+.party-editor-row { display: flex; gap: 0.5rem; align-items: center; }
+.party-editor .stepper { height: 46px; background: var(--bg); flex: 1; justify-content: space-between; }
+.party-editor-row > button { height: 46px; }
+.party-editor-row > button:not(.primary) { background: var(--bg); }
+.party-editor .error { margin-bottom: 0; }
+.ok-note { color: var(--ok); font-size: 0.88rem; font-weight: 700; margin: 0.25rem 0; }
