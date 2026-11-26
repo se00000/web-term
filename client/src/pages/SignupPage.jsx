@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
-import { ACCOUNT, other } from '../accountTypes.js';
+import { ACCOUNT } from '../accountTypes.js';
+import AccountSwitch from '../components/AccountSwitch.jsx';
+import AuthAside from '../components/AuthAside.jsx';
 
 /** type: 'customer' | 'owner' */
 export default function SignupPage({ type }) {
   const acc = ACCOUNT[type];
-  const otherAcc = ACCOUNT[other(type)];
   const { login } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -32,10 +33,12 @@ export default function SignupPage({ type }) {
   }
 
   return (
-    <form className={`card narrow account-${type}`} onSubmit={submit}>
-      <span className="account-chip">{acc.label} 전용</span>
+    <div className="auth-layout">
+    <AuthAside type={type} />
+    <form className={`auth account-${type}`} onSubmit={submit}>
+      <AccountSwitch mode="signup" />
       <h1>{acc.signupTitle}</h1>
-      <p className="muted">{acc.signupLead}</p>
+      <p className="auth-lead">{acc.signupLead}</p>
       <label>{type === 'owner' ? '대표자 이름' : '이름'}
         <input value={form.name} onChange={set('name')} maxLength={20} required />
       </label>
@@ -46,11 +49,9 @@ export default function SignupPage({ type }) {
         <input type="password" value={form.password} onChange={set('password')} autoComplete="new-password" minLength={8} maxLength={72} required />
       </label>
       {error && <p className="error">{error}</p>}
-      <button className="primary" disabled={busy}>{busy ? '가입 중…' : '가입하기'}</button>
-      <p className="muted">이미 계정이 있나요? <Link to={acc.loginPath}>{acc.loginTitle}</Link></p>
-      <p className="switch-account">
-        {otherAcc.label}이신가요? <Link to={otherAcc.signupPath}>{otherAcc.signupTitle}</Link>
-      </p>
+      <button className="cta-button" disabled={busy}>{busy ? '가입 중…' : '가입하기'}</button>
+      <p className="auth-foot">이미 계정이 있으신가요? <Link to={acc.loginPath}>로그인</Link></p>
     </form>
+    </div>
   );
 }

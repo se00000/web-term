@@ -15,6 +15,7 @@ export const toWaitingDto = w => w && ({
   id: w.id,
   storeId: w.store_id,
   storeName: w.store_name,
+  storeCategory: w.store_category,
   userId: w.user_id,
   customerName: w.customer_name,
   serviceDate: w.service_date,
@@ -27,7 +28,7 @@ export const toWaitingDto = w => w && ({
 });
 
 export function createWaitingService({ db, tx, now }) {
-  const selectWaiting = `SELECT w.*, s.name AS store_name, u.name AS customer_name
+  const selectWaiting = `SELECT w.*, s.name AS store_name, s.category AS store_category, u.name AS customer_name
                            FROM waitings w JOIN stores s ON s.id = w.store_id JOIN users u ON u.id = w.user_id`;
   const getWaiting = id => db.prepare(`${selectWaiting} WHERE w.id = ?`).get(id);
   const getStore = id => db.prepare('SELECT * FROM stores WHERE id = ?').get(id);

@@ -1,11 +1,11 @@
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { usePolling } from '../hooks.js';
-import { categoryIcon } from '../catalogIcons.js';
 import StoreCards from '../components/StoreCards.jsx';
+import CategoryRow from '../components/CategoryRow.jsx';
 
 /**
- * 음식 종류로 찾기: 종류 선택 → (선택) 지역으로 좁히기 → 매장 목록
+ * 음식 종류로 찾기: 종류 아이콘 선택 → (선택) 지역 칩으로 좁히기 → 매장 목록
  * 선택 상태는 주소(?category=&sido=)에 남깁니다.
  */
 export default function CategoryPage() {
@@ -22,40 +22,35 @@ export default function CategoryPage() {
   const { data: stores, error, loading } = usePolling(
     () => (category ? api(`/stores?${qs}`) : Promise.resolve(null)), 10000, [qs]);
 
+  const select = name => setParams(name === category ? {} : { category: name, ...(sido ? { sido } : {}) });
+  const sidosWithStores = catalog?.sidos.filter(s => s.count > 0) ?? [];
+
   return (
-    <section>
-      <h1>음식 종류로 찾기</h1>
+    <div className="page">
+      <h1 className="page-title">음식 종류로 찾기</h1>
       {catalogError && <p className="error">{catalogError.message}</p>}
 
-      <div className="category-grid">
-        {catalog?.categories.map(c => (
-          <button key={c.name} type="button"
-            className={`category-tile ${c.name === category ? 'active' : ''}`}
-            disabled={c.count === 0 && c.name !== category}
-            onClick={() => setParams(c.name === category ? {} : { category: c.name, ...(sido ? { sido } : {}) })}>
-            <span className="category-icon" aria-hidden="true">{categoryIcon(c.name)}</span>
-            <span className="category-name">{c.name}</span>
-            <span className="chip-count">{c.count}곳</span>
-          </button>
-        ))}
-      </div>
+      {catalog && <CategoryRow categories={catalog.categories} selected={category} onSelect={select} wrap />}
 
-      {!category && <p className="muted center">먹고 싶은 음식 종류를 골라보세요.</p>}
+      {!category && <div className="empty"><span>😋</span><p>먹고 싶은 음식을 골라보세요</p></div>}
+
       {category && (
-        <>
-          <div className="result-head row-between">
-            <span><b>{categoryIcon(category)} {category}</b> 매장 {stores ? `${stores.length}곳` : ''}</span>
-            <label className="inline-select">지역
-              <select value={sido} onChange={e => setParams(e.target.value ? { category, sido: e.target.value } : { category })}>
-                <option value="">전국</option>
-                {catalog?.sidos.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-              </select>
-            </label>
+        <section className="section">
+          <div className="chip-scroll" role="group" aria-label="지역으로 좁히기">
+            <button type="button" className={`chip ${!sido ? 'active' : ''}`} onClick={() => setParams({ category })}>전국</button>
+            {sidosWithStores.map(s => (
+              <button key={s.name} type="button" className={`chip ${s.name === sido ? 'active' : ''}`}
+                onClick={() => setParams({ category, sido: s.name })}>{s.name}</button>
+            ))}
+          </div>
+          <div className="section-head">
+            <h2 className="section-title">{category}{sido && ` · ${sido}`} <span className="muted">{stores ? stores.length : ''}</span></h2>
+            <span className="section-note">접수 중 · 대기 짧은 순</span>
           </div>
           <StoreCards stores={stores} loading={loading} error={error}
-            emptyText={sido ? `${sido}에는 아직 ${category} 매장이 없습니다.` : `아직 ${category} 매장이 없습니다.`} />
-        </>
+            emptyText={sido ? `${sido}에는 아직 ${category} 매장이 없어요.` : `아직 ${category} 매장이 없어요.`} />
+        </section>
       )}
-    </section>
+    </div>
   );
 }

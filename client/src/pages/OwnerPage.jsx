@@ -105,7 +105,9 @@ function StoreDashboard({ store, onStoreChanged }) {
       {message && <div className={message.type === 'ok' ? 'alert ok' : 'alert'}>{message.text}</div>}
       {error && <p className="error">{error.message}</p>}
 
-      <div className="card">
+      {/* PC: 왼쪽 대기열, 오른쪽 오늘 현황·처리 완료 / 모바일: 위아래로 */}
+      <div className="owner-columns">
+      <div className="card queue-card">
         <h2>대기 중 <span className="muted">({active.length}팀)</span></h2>
         {active.length === 0 && <p className="muted">대기 중인 손님이 없습니다.</p>}
         <ul className="queue">
@@ -142,9 +144,19 @@ function StoreDashboard({ store, onStoreChanged }) {
         </ul>
       </div>
 
-      {done.length > 0 && (
+      <div className="owner-side">
+        <div className="card">
+          <h2>오늘 현황</h2>
+          <dl className="owner-stats">
+            <div><dt>대기</dt><dd>{active.filter(w => w.status === 'WAITING').length}</dd></div>
+            <div><dt>호출 중</dt><dd>{active.filter(w => w.status === 'CALLED').length}</dd></div>
+            <div><dt>입장</dt><dd>{done.filter(w => w.status === 'SEATED').length}</dd></div>
+            <div><dt>노쇼</dt><dd>{done.filter(w => w.status === 'NO_SHOW').length}</dd></div>
+          </dl>
+        </div>
         <div className="card">
           <h2>오늘 처리 완료 <span className="muted">({done.length}건)</span></h2>
+          {done.length === 0 && <p className="muted small">아직 처리한 웨이팅이 없습니다.</p>}
           <ul className="queue compact">
             {done.map(w => (
               <li key={w.id} className={`queue-item status-${w.status.toLowerCase()}`}>
@@ -155,7 +167,8 @@ function StoreDashboard({ store, onStoreChanged }) {
             ))}
           </ul>
         </div>
-      )}
+      </div>
+      </div>
     </>
   );
 }

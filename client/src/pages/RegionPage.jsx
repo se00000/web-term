@@ -4,7 +4,7 @@ import { usePolling } from '../hooks.js';
 import StoreCards from '../components/StoreCards.jsx';
 
 /**
- * 지역으로 찾기: 시·도 선택 → (선택) 구·군 선택 → 매장 목록
+ * 지역으로 찾기: 왼쪽 시·도 목록 + 오른쪽 구·군 목록(2단 선택) → 매장 목록
  * 선택 상태는 주소(?sido=&district=)에 남겨서 새로고침·뒤로 가기에도 유지됩니다.
  */
 export default function RegionPage() {
@@ -25,49 +25,57 @@ export default function RegionPage() {
   const sidoCount = catalog?.sidos.find(s => s.name === sido)?.count ?? 0;
 
   return (
-    <section>
-      <h1>지역으로 찾기</h1>
+    <div className="page">
+      <h1 className="page-title">지역으로 찾기</h1>
       {catalogError && <p className="error">{catalogError.message}</p>}
 
-      <div className="card">
-        <h2 className="step-title">시·도</h2>
-        <div className="chips">
+      <div className="region-layout">
+      <div className="region-picker">
+        <ul className="region-col sidos" aria-label="시·도">
           {catalog?.sidos.map(s => (
-            <button key={s.name} type="button"
-              className={`chip ${s.name === sido ? 'active' : ''}`}
-              disabled={s.count === 0 && s.name !== sido}
-              onClick={() => setParams(s.name === sido ? {} : { sido: s.name })}>
-              {s.name}<span className="chip-count">{s.count}</span>
-            </button>
-          ))}
-        </div>
-
-        {sido && districts.length > 0 && (
-          <>
-            <h2 className="step-title">{sido} · 구·군</h2>
-            <div className="chips">
-              <button type="button" className={`chip ${!district ? 'active' : ''}`} onClick={() => setParams({ sido })}>
-                전체<span className="chip-count">{sidoCount}</span>
+            <li key={s.name}>
+              <button type="button"
+                className={`region-item ${s.name === sido ? 'active' : ''}`}
+                disabled={s.count === 0 && s.name !== sido}
+                onClick={() => setParams({ sido: s.name })}>
+                {s.name}{s.count > 0 && <span className="region-count">{s.count}</span>}
               </button>
-              {districts.map(d => (
-                <button key={d.name} type="button"
-                  className={`chip ${d.name === district ? 'active' : ''}`}
-                  onClick={() => setParams({ sido, district: d.name })}>
-                  {d.name}<span className="chip-count">{d.count}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+            </li>
+          ))}
+        </ul>
+        <ul className="region-col districts" aria-label="구·군">
+          {!sido && <li className="region-hint">왼쪽에서 시·도를 골라주세요</li>}
+          {sido && (
+            <li>
+              <button type="button" className={`region-item ${!district ? 'active' : ''}`} onClick={() => setParams({ sido })}>
+                {sido} 전체<span className="region-count">{sidoCount}</span>
+              </button>
+            </li>
+          )}
+          {districts.map(d => (
+            <li key={d.name}>
+              <button type="button" className={`region-item ${d.name === district ? 'active' : ''}`}
+                onClick={() => setParams({ sido, district: d.name })}>
+                {d.name}<span className="region-count">{d.count}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      {!sido && <p className="muted center">시·도를 선택하면 그 지역의 매장이 보여요. 숫자는 등록된 매장 수입니다.</p>}
+      <div className="region-results">
+      {!sido && <div className="empty"><span>📍</span><p>시·도를 고르면 그 지역 매장이 보여요</p></div>}
       {sido && (
-        <>
-          <p className="result-head"><b>{sido}{district && ` ${district}`}</b> 매장 {stores ? `${stores.length}곳` : ''}</p>
-          <StoreCards stores={stores} loading={loading} error={error} emptyText="이 지역에는 아직 등록된 매장이 없습니다." />
-        </>
+        <section className="section">
+          <div className="section-head">
+            <h2 className="section-title">{sido}{district && ` ${district}`} <span className="muted">{stores ? stores.length : ''}</span></h2>
+            <span className="section-note">접수 중 · 대기 짧은 순</span>
+          </div>
+          <StoreCards stores={stores} loading={loading} error={error} emptyText="이 지역에는 아직 등록된 매장이 없어요." />
+        </section>
       )}
-    </section>
+      </div>
+      </div>
+    </div>
   );
 }

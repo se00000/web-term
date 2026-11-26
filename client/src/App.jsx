@@ -30,40 +30,42 @@ function RequireRole({ role, children }) {
 
 export default function App() {
   const { user, logout, notice } = useAuth();
+  const isOwner = user?.role === 'OWNER';
 
   return (
     <>
-      <header className={`topbar ${user?.role === 'OWNER' ? 'topbar-owner' : ''}`}>
+      <header className={`topbar ${isOwner ? 'topbar-owner' : ''}`}>
         <div className="topbar-inner">
-          <Link to={user?.role === 'OWNER' ? '/owner' : '/'} className="brand">
-            줄서기{user?.role === 'OWNER' && <span className="brand-sub">사장님</span>}
+          <Link to={isOwner ? '/owner' : '/'} className="brand" aria-label="줄서기 홈">
+            <span className="brand-mark" aria-hidden="true">줄</span>
+            <span className="brand-text">줄서기</span>
+            {isOwner && <span className="brand-sub">사장님</span>}
           </Link>
-          <nav aria-label="계정">
-            {user?.role === 'CUSTOMER' && <NavLink to="/me">내 웨이팅</NavLink>}
-            {user?.role === 'OWNER' && <NavLink to="/owner" end>매장 관리</NavLink>}
+
+          {/* 식당 찾기 메뉴 — PC에서는 로고 옆 한 줄, 모바일에서는 아래 줄. 사장님 화면에서는 숨김 */}
+          {!isOwner && (
+            <nav className="menubar" aria-label="식당 찾기">
+              <NavLink to="/" end>홈</NavLink>
+              <NavLink to="/region">지역으로 찾기</NavLink>
+              <NavLink to="/category">음식 종류로 찾기</NavLink>
+            </nav>
+          )}
+
+          <nav className="account-nav" aria-label="계정">
+            {user && <span className="whoami">{user.name}님</span>}
+            {user?.role === 'CUSTOMER' && <NavLink to="/me" className="pill">🎫 내 웨이팅</NavLink>}
+            {isOwner && <NavLink to="/owner" end className="pill">매장 관리</NavLink>}
             {user
-              ? <button className="link" onClick={() => logout()}>로그아웃</button>
+              ? <button className="text-btn" onClick={() => logout()}>로그아웃</button>
               : <>
-                  <NavLink to="/login">로그인</NavLink>
-                  <NavLink to="/owner/login" className="owner-link">사장님</NavLink>
+                  <NavLink to="/login" className="text-btn">로그인</NavLink>
+                  <NavLink to="/owner/login" className="text-btn owner-link">사장님</NavLink>
                 </>}
           </nav>
         </div>
-
-        {/* 식당 찾기 메뉴 — 사장님 화면에서는 숨깁니다 */}
-        {user?.role !== 'OWNER' && (
-          <nav className="menubar" aria-label="식당 찾기">
-            <div className="menubar-inner">
-              <NavLink to="/" end>전체 매장</NavLink>
-              <NavLink to="/region">📍 지역으로 찾기</NavLink>
-              <NavLink to="/category">🍽️ 음식 종류로 찾기</NavLink>
-            </div>
-          </nav>
-        )}
       </header>
 
-      <main className="container">
-        {user && <p className="whoami">{user.name}님 · {ACCOUNT[typeOfRole(user.role)].label}</p>}
+      <main className={`container ${isOwner ? 'wide' : ''}`}>
         {notice && <div className="alert">{notice}</div>}
         <Routes>
           <Route path="/" element={<StoreListPage />} />
