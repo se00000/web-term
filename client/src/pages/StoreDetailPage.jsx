@@ -46,8 +46,8 @@ export default function StoreDetailPage() {
 
       <div className="card">
         <h2>웨이팅 등록</h2>
-        {!user && <p>웨이팅하려면 <Link to="/login" state={{ from: `/stores/${id}` }}>로그인</Link>해주세요.</p>}
-        {user?.role === 'STAFF' && <p className="muted">매장 직원 계정은 웨이팅을 등록할 수 없습니다.</p>}
+        {!user && <p>웨이팅하려면 <Link to="/login" state={{ from: `/stores/${id}` }}>손님 로그인</Link>해주세요.</p>}
+        {user?.role === 'OWNER' && <p className="muted">사장님 계정은 웨이팅을 등록할 수 없습니다. 손님 계정으로 로그인해주세요.</p>}
         {user?.role === 'CUSTOMER' && !store.isAccepting && <p className="muted">지금은 웨이팅을 받지 않습니다.</p>}
         {user?.role === 'CUSTOMER' && store.isAccepting && (
           <form onSubmit={register} className="inline-form">

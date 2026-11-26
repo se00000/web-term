@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY,
   email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
   name          TEXT NOT NULL,
-  role          TEXT NOT NULL CHECK (role IN ('CUSTOMER','STAFF')),
+  role          TEXT NOT NULL CHECK (role IN ('CUSTOMER','OWNER')),
   salt          TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   penalty_until TEXT,

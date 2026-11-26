@@ -127,7 +127,7 @@ form.card > button.primary { width: 100%; padding: 0.75rem; }
 .facts dt { font-size: 0.8rem; color: var(--muted); }
 .facts dd { margin: 0; font-weight: 600; }
 
-/* ---- 직원 대시보드 ---- */
+/* ---- 사장님 대시보드 ---- */
 .tabs { display: flex; gap: 0.4rem; margin-bottom: 1rem; overflow-x: auto; }
 .tab.active { background: var(--text); color: var(--surface); border-color: var(--text); }
 .queue { list-style: none; padding: 0; margin: 0; }
@@ -146,3 +146,26 @@ form.card > button.primary { width: 100%; padding: 0.75rem; }
   .stat-row { grid-template-columns: repeat(3, 1fr); }
   .ticket-no { font-size: 3.75rem; }
 }
+
+/* ---- 손님 / 사장님 구분 ---- */
+:root { --owner: #3b5bdb; --owner-soft: #edf2ff; }
+@media (prefers-color-scheme: dark) { :root { --owner: #748ffc; --owner-soft: #1e2440; } }
+
+.account-chip {
+  display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.6rem;
+  border-radius: 999px; background: var(--brand-soft); color: var(--brand); margin-bottom: 0.4rem;
+}
+.account-owner { border-top: 4px solid var(--owner); }
+.account-customer { border-top: 4px solid var(--brand); }
+.account-owner .account-chip { background: var(--owner-soft); color: var(--owner); }
+.account-owner button.primary { background: var(--owner); border-color: var(--owner); }
+.account-owner a { color: var(--owner); }
+.switch-account { margin: 1rem 0 0; padding-top: 0.9rem; border-top: 1px solid var(--line); text-align: center; font-size: 0.92rem; color: var(--muted); }
+.switch-account a { font-weight: 700; }
+.account-customer .switch-account a { color: var(--owner); }
+.account-owner .switch-account a { color: var(--brand); }
+
+nav a.owner-link { color: var(--owner); font-weight: 600; }
+.topbar-owner { border-bottom: 3px solid var(--owner); }
+.topbar-owner .brand { color: var(--owner); }
+.brand-sub { font-size: 0.75rem; font-weight: 700; margin-left: 0.4rem; padding: 0.1rem 0.45rem; border-radius: 6px; background: var(--owner-soft); color: var(--owner); vertical-align: middle; }

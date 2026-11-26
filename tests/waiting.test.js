@@ -12,8 +12,8 @@ test('정상 흐름: 등록 → 호출 → 입장, 이력이 순서대로 남는
   assert.equal(reg.data.ticketNo, 1);
   assert.equal(reg.data.status, 'WAITING');
 
-  assert.equal((await f.staff(f.staffA, reg.data.id, 'call')).data.status, 'CALLED');
-  assert.equal((await f.staff(f.staffA, reg.data.id, 'seat')).data.status, 'SEATED');
+  assert.equal((await f.owner(f.ownerA, reg.data.id, 'call')).data.status, 'CALLED');
+  assert.equal((await f.owner(f.ownerA, reg.data.id, 'seat')).data.status, 'SEATED');
 
   const hist = await f.request(`/api/waitings/${reg.data.id}/history`, { token: c.token });
   assert.deepEqual(hist.data.map(h => h.action), ['REGISTER', 'CALL', 'SEAT']);
@@ -96,7 +96,7 @@ test('잘못된 인원(0명, 매장 최대 초과, 문자열)은 400', async t =
 
 test('접수 마감한 매장에는 등록할 수 없다', async t => {
   const f = await fixture(t);
-  await f.request('/api/staff/stores/1', { token: f.staffA, method: 'PATCH', body: { isAccepting: false } });
+  await f.request('/api/owner/stores/1', { token: f.ownerA, method: 'PATCH', body: { isAccepting: false } });
   const c = await f.customer('late');
   const r = await f.register(c.token);
   assert.equal(r.status, 409);
@@ -107,10 +107,10 @@ test('종료된(입장 완료) 웨이팅은 취소·호출할 수 없다', async
   const f = await fixture(t);
   const c = await f.customer('done');
   const w = (await f.register(c.token)).data;
-  await f.staff(f.staffA, w.id, 'call');
-  await f.staff(f.staffA, w.id, 'seat');
+  await f.owner(f.ownerA, w.id, 'call');
+  await f.owner(f.ownerA, w.id, 'seat');
   assert.equal((await f.cancel(c.token, w.id)).status, 409);
-  assert.equal((await f.staff(f.staffA, w.id, 'call')).status, 409);
+  assert.equal((await f.owner(f.ownerA, w.id, 'call')).status, 409);
   assert.equal(f.row(w.id).status, 'SEATED');
 });
 
@@ -118,8 +118,8 @@ test('호출되지 않은 웨이팅은 입장·노쇼 처리할 수 없다', asy
   const f = await fixture(t);
   const c = await f.customer('notcalled');
   const w = (await f.register(c.token)).data;
-  assert.equal((await f.staff(f.staffA, w.id, 'seat')).status, 409);
-  assert.equal((await f.staff(f.staffA, w.id, 'no-show')).status, 409);
+  assert.equal((await f.owner(f.ownerA, w.id, 'seat')).status, 409);
+  assert.equal((await f.owner(f.ownerA, w.id, 'no-show')).status, 409);
   assert.equal(f.row(w.id).status, 'WAITING');
 });
 
@@ -128,7 +128,7 @@ test('선착순 호출: 맨 앞이 아닌 손님을 먼저 호출하면 거절�
   const [a, b] = [await f.customer('first'), await f.customer('second')];
   await f.register(a.token);
   const wb = (await f.register(b.token)).data;
-  const r = await f.staff(f.staffA, wb.id, 'call');
+  const r = await f.owner(f.ownerA, wb.id, 'call');
   assert.equal(r.status, 409);
   assert.equal(r.data.code, 'NOT_FIRST_IN_LINE');
   assert.equal(f.row(wb.id).status, 'WAITING');
@@ -145,19 +145,19 @@ test('권한: 다른 손님의 웨이팅은 취소할 수 없다', async t => {
   assert.equal(f.row(w.id).status, 'WAITING');
 });
 
-test('권한: 손님은 호출할 수 없고, 다른 매장 직원도 호출할 수 없다', async t => {
+test('권한: 손님은 호출할 수 없고, 다른 사장님도 호출할 수 없다', async t => {
   const f = await fixture(t);
   const c = await f.customer('guest');
   const w = (await f.register(c.token, 1)).data;
-  assert.equal((await f.staff(c.token, w.id, 'call')).status, 403);
-  assert.equal((await f.staff(f.staffB, w.id, 'call')).status, 403);
-  assert.equal((await f.request('/api/staff/stores/1/waitings', { token: f.staffB })).status, 403);
+  assert.equal((await f.owner(c.token, w.id, 'call')).status, 403);
+  assert.equal((await f.owner(f.ownerB, w.id, 'call')).status, 403);
+  assert.equal((await f.request('/api/owner/stores/1/waitings', { token: f.ownerB })).status, 403);
   assert.equal(f.row(w.id).status, 'WAITING');
 });
 
-test('권한: 직원 계정은 손님용 웨이팅 등록을 할 수 없다', async t => {
+test('권한: 사장님 계정은 손님용 웨이팅 등록을 할 수 없다', async t => {
   const f = await fixture(t);
-  assert.equal((await f.register(f.staffA)).status, 403);
+  assert.equal((await f.register(f.ownerA)).status, 403);
 });
 
 // ───────── 노쇼 · 트랜잭션 ─────────
@@ -167,15 +167,15 @@ test('노쇼: 호출 후 10분이 안 됐으면 거절, 지나면 처리되고 �
   const [a, b] = [await f.customer('ns-a'), await f.customer('ns-b')];
   const wa = (await f.register(a.token)).data;
   const wb = (await f.register(b.token)).data;
-  await f.staff(f.staffA, wa.id, 'call');
+  await f.owner(f.ownerA, wa.id, 'call');
 
   f.clock.advance(9);
-  const early = await f.staff(f.staffA, wa.id, 'no-show');
+  const early = await f.owner(f.ownerA, wa.id, 'no-show');
   assert.equal(early.status, 409);
   assert.equal(early.data.code, 'CALL_NOT_EXPIRED');
 
   f.clock.advance(1);
-  const r = await f.staff(f.staffA, wa.id, 'no-show');
+  const r = await f.owner(f.ownerA, wa.id, 'no-show');
   assert.equal(r.status, 200);
   assert.equal(r.data.waiting.status, 'NO_SHOW');
   assert.equal(r.data.nextCalled.id, wb.id);
@@ -187,9 +187,9 @@ test('노쇼 2회 누적 시 7일간 등록 제한, 7일 후 다시 가능', asy
   const c = await f.customer('noshow');
   for (let i = 0; i < 2; i++) {
     const w = (await f.register(c.token)).data;
-    await f.staff(f.staffA, w.id, 'call');
+    await f.owner(f.ownerA, w.id, 'call');
     f.clock.advance(10);
-    await f.staff(f.staffA, w.id, 'no-show');
+    await f.owner(f.ownerA, w.id, 'no-show');
   }
   const blocked = await f.register(c.token);
   assert.equal(blocked.status, 403);
@@ -204,7 +204,7 @@ test('트랜잭션: 노쇼 처리 중 다음 순번 호출이 실패하면 노�
   const [a, b] = [await f.customer('tx-a'), await f.customer('tx-b')];
   const wa = (await f.register(a.token)).data;
   const wb = (await f.register(b.token)).data;
-  await f.staff(f.staffA, wa.id, 'call');
+  await f.owner(f.ownerA, wa.id, 'call');
   f.clock.advance(10);
 
   // 자동 호출 이력 저장 단계에서 강제로 실패하게 만든다
@@ -212,14 +212,14 @@ test('트랜잭션: 노쇼 처리 중 다음 순번 호출이 실패하면 노�
              BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
   const logsBefore = f.count('SELECT COUNT(*) AS n FROM waiting_logs');
 
-  const r = await f.staff(f.staffA, wa.id, 'no-show');
+  const r = await f.owner(f.ownerA, wa.id, 'no-show');
   assert.equal(r.status, 500);
   assert.equal(f.row(wa.id).status, 'CALLED');   // 노쇼로 바뀌지 않음
   assert.equal(f.row(wb.id).status, 'WAITING');  // 다음 순번도 그대로
   assert.equal(f.count('SELECT COUNT(*) AS n FROM waiting_logs'), logsBefore);
 
   f.db.exec('DROP TRIGGER fail_auto_call');
-  assert.equal((await f.staff(f.staffA, wa.id, 'no-show')).status, 200); // 원인 제거 후 재시도 성공
+  assert.equal((await f.owner(f.ownerA, wa.id, 'no-show')).status, 200); // 원인 제거 후 재시도 성공
 });
 
 test('영업 종료: 접수가 닫히고 남은 웨이팅이 한 번에 종료된다', async t => {
@@ -227,9 +227,9 @@ test('영업 종료: 접수가 닫히고 남은 웨이팅이 한 번에 종료�
   const [a, b] = [await f.customer('close-a'), await f.customer('close-b')];
   const wa = (await f.register(a.token)).data;
   await f.register(b.token);
-  await f.staff(f.staffA, wa.id, 'call');
+  await f.owner(f.ownerA, wa.id, 'call');
 
-  const r = await f.request('/api/staff/stores/1/close-day', { token: f.staffA, method: 'POST', body: {} });
+  const r = await f.request('/api/owner/stores/1/close-day', { token: f.ownerA, method: 'POST', body: {} });
   assert.equal(r.data.closedCount, 2);
   assert.equal(f.count(`SELECT COUNT(*) AS n FROM waitings WHERE status IN ('WAITING','CALLED')`), 0);
   assert.equal((await f.register(a.token)).data.code, 'NOT_ACCEPTING');

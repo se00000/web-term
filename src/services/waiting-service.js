@@ -53,12 +53,12 @@ export function createWaitingService({ db, tx, now }) {
   function assertOwnStore(actor, storeId) {
     const store = getStore(storeId);
     if (!store) throw notFound('매장');
-    if (actor.role !== 'STAFF' || store.owner_id !== actor.id) throw forbidden('이 매장의 직원만 처리할 수 있습니다.');
+    if (actor.role !== 'OWNER' || store.owner_id !== actor.id) throw forbidden('이 매장의 사장님만 처리할 수 있습니다.');
     return store;
   }
 
-  /** 직원 작업 공통: 웨이팅 조회 → 매장 소유 확인 → 필요한 상태 확인 */
-  function loadForStaff(actor, waitingId, expectedStatus) {
+  /** 사장님 작업 공통: 웨이팅 조회 → 매장 소유 확인 → 필요한 상태 확인 */
+  function loadForOwner(actor, waitingId, expectedStatus) {
     const w = getWaiting(waitingId);
     if (!w) throw notFound('웨이팅');
     assertOwnStore(actor, w.store_id);
@@ -129,10 +129,10 @@ export function createWaitingService({ db, tx, now }) {
       return { ...toWaitingDto(w), aheadCount: positionOf(w) };
     },
 
-    /** 직원: 맨 앞 대기자 호출 */
+    /** 사장님: 맨 앞 대기자 호출 */
     call(actor, waitingId) {
       return tx(() => {
-        const w = loadForStaff(actor, waitingId, 'WAITING');
+        const w = loadForOwner(actor, waitingId, 'WAITING');
         const t = now();
         if (w.service_date !== seoulDate(t)) throw invalidState('오늘 접수된 웨이팅이 아닙니다.');
         const first = firstInLine(w.store_id, w.service_date);
@@ -144,10 +144,10 @@ export function createWaitingService({ db, tx, now }) {
       });
     },
 
-    /** 직원: 입장 처리 */
+    /** 사장님: 입장 처리 */
     seat(actor, waitingId) {
       return tx(() => {
-        const w = loadForStaff(actor, waitingId, 'CALLED');
+        const w = loadForOwner(actor, waitingId, 'CALLED');
         const at = iso(now());
         transition(w, 'SEATED', { actorId: actor.id, action: 'SEAT', at, set: { finished_at: at } });
         return toWaitingDto(getWaiting(w.id));
@@ -155,12 +155,12 @@ export function createWaitingService({ db, tx, now }) {
     },
 
     /**
-     * 직원: 노쇼 처리. 아래 세 가지가 하나의 트랜잭션입니다.
+     * 사장님: 노쇼 처리. 아래 세 가지가 하나의 트랜잭션입니다.
      *  1) 웨이팅을 NO_SHOW로 변경  2) 노쇼 누적 시 손님 이용 제한  3) 다음 순번 자동 호출
      */
     noShow(actor, waitingId) {
       return tx(() => {
-        const w = loadForStaff(actor, waitingId, 'CALLED');
+        const w = loadForOwner(actor, waitingId, 'CALLED');
         const t = now(), at = iso(t);
         if (minutesSince(w.called_at, t) < RULES.CALL_TIMEOUT_MIN) {
           throw new AppError(409, 'CALL_NOT_EXPIRED', `호출 후 ${RULES.CALL_TIMEOUT_MIN}분이 지나야 노쇼 처리할 수 있습니다.`);
@@ -186,7 +186,7 @@ export function createWaitingService({ db, tx, now }) {
       });
     },
 
-    /** 직원: 영업 종료 — 접수를 닫고 남은 웨이팅을 한 번에 종료합니다. */
+    /** 사장님: 영업 종료 — 접수를 닫고 남은 웨이팅을 한 번에 종료합니다. */
     closeDay(actor, storeId) {
       return tx(() => {
         assertOwnStore(actor, storeId);
@@ -198,7 +198,7 @@ export function createWaitingService({ db, tx, now }) {
       });
     },
 
-    /** 직원: 오늘 매장 웨이팅 목록 */
+    /** 사장님: 오늘 매장 웨이팅 목록 */
     listForStore(actor, storeId) {
       assertOwnStore(actor, storeId);
       const rows = db.prepare(`${selectWaiting} WHERE w.store_id = ? AND w.service_date = ? ORDER BY w.ticket_no`)

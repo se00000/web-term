@@ -20,8 +20,9 @@ export function AuthProvider({ children }) {
     api('/me').then(setUser).catch(() => tokenStore.clear()).finally(() => setReady(true));
   }, [logout]);
 
-  async function login(email, password) {
-    const r = await api('/auth/login', { method: 'POST', body: { email, password } });
+  /** type: 'customer' | 'owner' — 손님 로그인과 사장님 로그인은 서버에서도 경로가 다릅니다. */
+  async function login(type, email, password) {
+    const r = await api(`/auth/${type}/login`, { method: 'POST', body: { email, password } });
     tokenStore.set(r.accessToken);
     setUser(r.user);
     setNotice('');

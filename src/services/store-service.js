@@ -20,7 +20,7 @@ export function createStoreService({ db, tx, now }) {
   function ownStore(actor, id) {
     const s = db.prepare('SELECT * FROM stores WHERE id = ?').get(id);
     if (!s || !s.is_active) throw notFound('매장');
-    if (actor.role !== 'STAFF' || s.owner_id !== actor.id) throw forbidden('이 매장의 직원만 수정할 수 있습니다.');
+    if (actor.role !== 'OWNER' || s.owner_id !== actor.id) throw forbidden('이 매장의 사장님만 수정할 수 있습니다.');
     return s;
   }
 
@@ -41,7 +41,7 @@ export function createStoreService({ db, tx, now }) {
     },
 
     create(actor, { name, address, maxParty }) {
-      if (actor.role !== 'STAFF') throw forbidden('매장 직원만 매장을 등록할 수 있습니다.');
+      if (actor.role !== 'OWNER') throw forbidden('사장님만 매장을 등록할 수 있습니다.');
       const r = db.prepare(`INSERT INTO stores (owner_id, name, address, max_party, is_accepting, created_at)
                             VALUES (?, ?, ?, ?, 0, ?)`).run(actor.id, name, address, maxParty, iso(now()));
       return toStoreDto(db.prepare('SELECT * FROM stores WHERE id = ?').get(r.lastInsertRowid));

@@ -37,7 +37,7 @@ export function createApp({ db, secret, now = () => new Date() }) {
   const auth = createAuth({ db, secret, now });
   const stores = createStoreService({ db, tx, now });
   const waitings = createWaitingService({ db, tx, now });
-  const staffOnly = [auth.required, requireRole('STAFF')];
+  const ownerOnly = [auth.required, requireRole('OWNER')];
 
   const app = express();
   app.disable('x-powered-by');
@@ -47,20 +47,25 @@ export function createApp({ db, secret, now = () => new Date() }) {
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
   // ---- 인증 ----
-  app.post('/api/auth/signup', (req, res) => {
-    const b = body(req, ['email', 'password', 'name']);
-    const email = text(b.email, '이메일', 5, 100).toLowerCase();
-    if (!EMAIL_RE.test(email)) throw badInput('이메일 형식이 올바르지 않습니다.');
-    if (typeof b.password !== 'string' || b.password.length < 8 || b.password.length > 72) throw badInput('비밀번호는 8~72자여야 합니다.');
-    const name = text(b.name, '이름', 1, 20);
-    res.status(201).json(auth.signup({ email, password: b.password, name }));
-  });
+  // 손님용(/api/auth/customer/...)과 사장님용(/api/auth/owner/...) 가입·로그인을 경로로 나눕니다.
+  // 계정 종류는 요청 본문으로 받지 않으므로, 본문에 role을 넣어 다른 종류로 가입할 수 없습니다.
+  const ACCOUNT_TYPES = { customer: 'CUSTOMER', owner: 'OWNER' };
+  for (const [type, role] of Object.entries(ACCOUNT_TYPES)) {
+    app.post(`/api/auth/${type}/signup`, (req, res) => {
+      const b = body(req, ['email', 'password', 'name']);
+      const email = text(b.email, '이메일', 5, 100).toLowerCase();
+      if (!EMAIL_RE.test(email)) throw badInput('이메일 형식이 올바르지 않습니다.');
+      if (typeof b.password !== 'string' || b.password.length < 8 || b.password.length > 72) throw badInput('비밀번호는 8~72자여야 합니다.');
+      const name = text(b.name, '이름', 1, 20);
+      res.status(201).json(auth.signup({ email, password: b.password, name, role }));
+    });
 
-  app.post('/api/auth/login', (req, res) => {
-    const b = body(req, ['email', 'password']);
-    if (typeof b.email !== 'string' || typeof b.password !== 'string' || !b.email || !b.password) throw badInput('이메일과 비밀번호를 입력해주세요.');
-    res.json(auth.login({ email: b.email.trim().toLowerCase(), password: b.password }));
-  });
+    app.post(`/api/auth/${type}/login`, (req, res) => {
+      const b = body(req, ['email', 'password']);
+      if (typeof b.email !== 'string' || typeof b.password !== 'string' || !b.email || !b.password) throw badInput('이메일과 비밀번호를 입력해주세요.');
+      res.json(auth.login({ email: b.email.trim().toLowerCase(), password: b.password, role }));
+    });
+  }
 
   app.get('/api/me', auth.required, (req, res) => res.json(req.user));
 
@@ -81,9 +86,9 @@ export function createApp({ db, secret, now = () => new Date() }) {
   });
   app.get('/api/waitings/:id/history', auth.required, (req, res) => res.json(waitings.history(req.user, id(req.params.id))));
 
-  // ---- 매장 관리 (직원) ----
-  app.get('/api/staff/stores', ...staffOnly, (req, res) => res.json(stores.listMine(req.user)));
-  app.post('/api/staff/stores', ...staffOnly, (req, res) => {
+  // ---- 매장 관리 (사장님) ----
+  app.get('/api/owner/stores', ...ownerOnly, (req, res) => res.json(stores.listMine(req.user)));
+  app.post('/api/owner/stores', ...ownerOnly, (req, res) => {
     const b = body(req, ['name', 'address', 'maxParty']);
     res.status(201).json(stores.create(req.user, {
       name: text(b.name, '매장 이름', 1, 40),
@@ -91,7 +96,7 @@ export function createApp({ db, secret, now = () => new Date() }) {
       maxParty: int(b.maxParty, '최대 인원', 1, 20),
     }));
   });
-  app.patch('/api/staff/stores/:id', ...staffOnly, (req, res) => {
+  app.patch('/api/owner/stores/:id', ...ownerOnly, (req, res) => {
     const b = body(req, ['name', 'address', 'maxParty', 'isAccepting']);
     const patch = {};
     if ('name' in b) patch.name = text(b.name, '매장 이름', 1, 40);
@@ -104,21 +109,21 @@ export function createApp({ db, secret, now = () => new Date() }) {
     if (!Object.keys(patch).length) throw badInput('변경할 항목이 없습니다.');
     res.json(stores.update(req.user, id(req.params.id), patch));
   });
-  app.delete('/api/staff/stores/:id', ...staffOnly, (req, res) => res.json(stores.deactivate(req.user, id(req.params.id))));
-  app.post('/api/staff/stores/:id/close-day', ...staffOnly, (req, res) => {
+  app.delete('/api/owner/stores/:id', ...ownerOnly, (req, res) => res.json(stores.deactivate(req.user, id(req.params.id))));
+  app.post('/api/owner/stores/:id/close-day', ...ownerOnly, (req, res) => {
     body(req, []);
     res.json(waitings.closeDay(req.user, id(req.params.id)));
   });
-  app.get('/api/staff/stores/:id/waitings', ...staffOnly, (req, res) => res.json(waitings.listForStore(req.user, id(req.params.id))));
+  app.get('/api/owner/stores/:id/waitings', ...ownerOnly, (req, res) => res.json(waitings.listForStore(req.user, id(req.params.id))));
 
-  // ---- 웨이팅 처리 (직원) ----
+  // ---- 웨이팅 처리 (사장님) ----
   for (const action of ['call', 'seat']) {
-    app.post(`/api/staff/waitings/:id/${action}`, ...staffOnly, (req, res) => {
+    app.post(`/api/owner/waitings/:id/${action}`, ...ownerOnly, (req, res) => {
       body(req, []);
       res.json(waitings[action](req.user, id(req.params.id)));
     });
   }
-  app.post('/api/staff/waitings/:id/no-show', ...staffOnly, (req, res) => {
+  app.post('/api/owner/waitings/:id/no-show', ...ownerOnly, (req, res) => {
     body(req, []);
     res.json(waitings.noShow(req.user, id(req.params.id)));
   });

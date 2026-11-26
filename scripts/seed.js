@@ -16,8 +16,8 @@ if (db.prepare('SELECT COUNT(*) AS n FROM users').get().n > 0) {
 
 const now = new Date().toISOString();
 const users = [
-  ['staff1@example.com', '김사장(국밥집)', 'STAFF'],
-  ['staff2@example.com', '이사장(파스타)', 'STAFF'],
+  ['owner1@example.com', '김사장(국밥집)', 'OWNER'],
+  ['owner2@example.com', '이사장(파스타)', 'OWNER'],
   ['guest1@example.com', '손님 민지', 'CUSTOMER'],
   ['guest2@example.com', '손님 준호', 'CUSTOMER'],
   ['guest3@example.com', '손님 서연', 'CUSTOMER'],

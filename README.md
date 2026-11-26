@@ -2,7 +2,7 @@
 
 웹서비스설계 Term Project (개인)
 
-> 손님이 식당에 가지 않고도 웨이팅을 등록해 순번을 받고, 매장 직원이 선착순으로 호출·입장·노쇼를 처리하는 서비스입니다.
+> 손님이 식당에 가지 않고도 웨이팅을 등록해 순번을 받고, 사장님이 선착순으로 호출·입장·노쇼를 처리하는 서비스입니다.
 
 - 저장소: https://github.com/se00000/web-term
 - 보고서: [docs/report.pdf](docs/report.pdf) *(작성 예정)*
@@ -18,16 +18,33 @@
 | 테스트 | `node:test` (서버를 임시 DB로 띄워 실제 HTTP로 검증) |
 | 화면 | React 18 + React Router (Vite), `client/` — 빌드 결과를 Express가 같은 주소에서 서빙 |
 
+## 계정 종류와 로그인
+
+손님과 사장님은 **가입·로그인 화면과 API가 분리**되어 있습니다.
+
+| 계정 | 가입 / 로그인 화면 | API | 로그인 후 |
+|---|---|---|---|
+| 손님 (`CUSTOMER`) | `/signup`, `/login` | `/api/auth/customer/signup`, `/api/auth/customer/login` | 매장 목록, 웨이팅 등록, 내 번호표 |
+| 사장님 (`OWNER`) | `/owner/signup`, `/owner/login` | `/api/auth/owner/signup`, `/api/auth/owner/login` | 매장 등록·관리, 대기열 처리 |
+
+- 계정 종류는 **요청 본문이 아니라 호출한 경로**로 정해집니다. 손님 가입 요청에 `role`을 넣으면 400으로 거절합니다.
+- 비밀번호가 맞아도 계정 종류가 다른 로그인 화면이면 토큰을 주지 않습니다(403 `WRONG_ACCOUNT_TYPE`). 화면은 맞는 로그인으로 안내합니다.
+- 비밀번호를 먼저 확인하므로, 비밀번호를 모르는 사람에게는 계정이 손님인지 사장님인지 드러나지 않습니다(항상 401).
+- 한 이메일은 하나의 계정 종류로만 가입할 수 있습니다.
+- 사장님 화면(`/owner`)은 상단 바 색이 달라 손님 화면과 구분됩니다.
+
+> 제한사항: 사장님 가입 시 사업자등록 확인은 하지 않습니다. 실제 서비스라면 사업자 인증 후 사장님 권한을 부여해야 합니다.
+
 ## 역할과 핵심 규칙
 
 | 행동 | 주체 | 허용 조건 |
 |---|---|---|
 | 웨이팅 등록 | 손님 | 매장 접수 중, 인원 1~매장 최대, **진행 중 웨이팅이 없음(전체 매장 통틀어 1개)**, 노쇼 제한 기간 아님 |
 | 취소 | 등록한 본인 | WAITING 또는 CALLED |
-| 호출 | 그 매장 직원 | WAITING이고 **대기 중 맨 앞 순번** |
-| 입장 | 그 매장 직원 | CALLED |
-| 노쇼 | 그 매장 직원 | CALLED이고 호출 후 10분 경과 → 다음 순번 자동 호출 |
-| 영업 종료 | 그 매장 직원 | 접수 마감 + 남은 웨이팅 일괄 종료 |
+| 호출 | 그 사장님 | WAITING이고 **대기 중 맨 앞 순번** |
+| 입장 | 그 사장님 | CALLED |
+| 노쇼 | 그 사장님 | CALLED이고 호출 후 10분 경과 → 다음 순번 자동 호출 |
+| 영업 종료 | 그 사장님 | 접수 마감 + 남은 웨이팅 일괄 종료 |
 
 - 노쇼가 최근 30일 안에 2회가 되면 7일 동안 등록할 수 없습니다.
 - 상태: `WAITING → CALLED → SEATED`, `WAITING/CALLED → CANCELLED`, `CALLED → NO_SHOW`. 종료 상태(SEATED·CANCELLED·NO_SHOW)는 변경할 수 없습니다.
@@ -61,7 +78,9 @@ npm run client:dev        # http://localhost:5173
 | 매장 목록 (대기 팀 수 10초 갱신) | `/` | 누구나 |
 | 매장 상세 · 웨이팅 등록 | `/stores/:id` | 손님 |
 | 내 웨이팅 번호표 (내 앞 팀 수 5초 갱신, 취소) | `/me` | 손님 |
-| 매장 관리 (접수 열기·닫기, 호출·입장·노쇼, 영업 종료, 매장 등록·수정·닫기) | `/staff` | 매장 직원 |
+| 손님 로그인 · 회원가입 | `/login`, `/signup` | 손님 |
+| 사장님 로그인 · 회원가입 | `/owner/login`, `/owner/signup` | 사장님 |
+| 매장 관리 (접수 열기·닫기, 호출·입장·노쇼, 영업 종료, 매장 등록·수정·닫기) | `/owner` | 사장님 |
 
 화면은 맨 앞이 아닌 순번의 호출 버튼을 비활성화하는 등 안내만 하고, 모든 규칙은 서버에서 다시 검사합니다. 예를 들어 노쇼 버튼은 10분 전에도 누를 수 있지만 서버가 거절하고 그 이유를 화면에 보여줍니다.
 
@@ -97,7 +116,8 @@ npm test
 | 정상 흐름 | 등록 → 호출 → 입장, 이력 기록, 내 앞 대기 팀 수 |
 | 선착순·중복 | 동시 등록 20건 → 순번 1~20 중복·누락 없음 / 같은 손님 5연타 → 1건 / 다른 매장 동시 웨이팅 거절 / DB 유니크 인덱스 최종 방어 |
 | 입력·상태 오류 | 잘못된 인원, 접수 마감, 종료된 웨이팅 변경, 호출 전 입장·노쇼, 맨 앞이 아닌 손님 호출 |
-| 권한 | 남의 웨이팅 취소, 손님의 호출, 다른 매장 직원의 호출·목록 조회, 직원의 웨이팅 등록 |
+| 로그인 분리 | 손님·사장님 가입 각각 성공, 다른 종류 로그인 403(토큰 미발급), 틀린 비밀번호는 종류와 무관하게 401, 본문 role 주입 거절, 이메일 중복 409 |
+| 권한 | 남의 웨이팅 취소, 손님의 호출, 다른 사장님의 호출·목록 조회, 사장님의 웨이팅 등록 |
 | 트랜잭션 | 노쇼 처리 중 다음 순번 호출 실패 → 노쇼·이력까지 전부 롤백 |
 | 기타 | 노쇼 누적 제한과 해제, 영업 종료 일괄 처리, 지난 영업일 웨이팅 자동 만료, 매장 비활성화 |
 
@@ -105,18 +125,19 @@ npm test
 
 | 메서드 | 경로 | 권한 |
 |---|---|---|
-| POST | `/api/auth/signup`, `/api/auth/login` | 공개 |
+| POST | `/api/auth/customer/signup`, `/api/auth/customer/login` | 공개 (손님) |
+| POST | `/api/auth/owner/signup`, `/api/auth/owner/login` | 공개 (사장님) |
 | GET | `/api/me` | 로그인 |
 | GET | `/api/stores`, `/api/stores/:id` | 공개 |
 | POST | `/api/stores/:id/waitings` `{partySize}` | 손님 |
 | GET | `/api/me/waiting` | 로그인 |
 | POST | `/api/waitings/:id/cancel` | 본인 |
-| GET | `/api/waitings/:id/history` | 본인·매장 직원 |
-| GET/POST | `/api/staff/stores` | 직원 |
-| PATCH/DELETE | `/api/staff/stores/:id` | 매장 직원 |
-| POST | `/api/staff/stores/:id/close-day` | 매장 직원 |
-| GET | `/api/staff/stores/:id/waitings` | 매장 직원 |
-| POST | `/api/staff/waitings/:id/call` · `seat` · `no-show` | 매장 직원 |
+| GET | `/api/waitings/:id/history` | 본인·사장님 |
+| GET/POST | `/api/owner/stores` | 사장님 |
+| PATCH/DELETE | `/api/owner/stores/:id` | 사장님 |
+| POST | `/api/owner/stores/:id/close-day` | 사장님 |
+| GET | `/api/owner/stores/:id/waitings` | 사장님 |
+| POST | `/api/owner/waitings/:id/call` · `seat` · `no-show` | 사장님 |
 
 오류 응답 형식: `{ "code": "ALREADY_WAITING", "message": "..." }`
 
@@ -135,6 +156,7 @@ tests/    auth, store, waiting 테스트
 client/
   src/api.js                API 호출·토큰 보관·오류 처리
   src/auth.jsx              로그인 상태 (토큰 만료 시 자동 로그아웃)
+  src/accountTypes.js       손님/사장님 화면 문구·경로
   src/hooks.js              주기적 갱신(polling)
   src/pages/                화면별 컴포넌트
 ```

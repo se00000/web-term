@@ -4,8 +4,8 @@ import { useNow, usePolling } from '../hooks.js';
 
 const CALL_TIMEOUT_MIN = 10; // 서버 규칙과 같은 값 (화면 안내용, 최종 검사는 서버)
 
-export default function StaffPage() {
-  const { data: stores, error, reload: reloadStores } = usePolling(() => api('/staff/stores'), 0);
+export default function OwnerPage() {
+  const { data: stores, error, reload: reloadStores } = usePolling(() => api('/owner/stores'), 0);
   const [selectedId, setSelectedId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
 
@@ -38,7 +38,7 @@ export default function StaffPage() {
 }
 
 function StoreDashboard({ store, onStoreChanged }) {
-  const { data: waitings, error, reload } = usePolling(() => api(`/staff/stores/${store.id}/waitings`), 5000, [store.id]);
+  const { data: waitings, error, reload } = usePolling(() => api(`/owner/stores/${store.id}/waitings`), 5000, [store.id]);
   const [message, setMessage] = useState(null);
   const [pending, setPending] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -59,24 +59,24 @@ function StoreDashboard({ store, onStoreChanged }) {
   }
 
   const act = (w, action, label) => run(`${w.id}-${action}`,
-    () => api(`/staff/waitings/${w.id}/${action}`, { method: 'POST', body: {} }),
+    () => api(`/owner/waitings/${w.id}/${action}`, { method: 'POST', body: {} }),
     r => action === 'no-show'
       ? `${w.ticketNo}번 노쇼 처리했습니다.${r.nextCalled ? ` 다음 순번 ${r.nextCalled.ticketNo}번을 자동 호출했습니다.` : ''}${r.penaltyUntil ? ' (해당 손님은 노쇼 누적으로 이용 제한)' : ''}`
       : `${w.ticketNo}번 ${label} 처리했습니다.`);
 
   const toggleAccepting = () => run('toggle',
-    () => api(`/staff/stores/${store.id}`, { method: 'PATCH', body: { isAccepting: !store.isAccepting } }),
+    () => api(`/owner/stores/${store.id}`, { method: 'PATCH', body: { isAccepting: !store.isAccepting } }),
     store.isAccepting ? '접수를 마감했습니다.' : '접수를 시작했습니다.');
 
   const closeDay = () => {
     if (!window.confirm('영업을 종료할까요? 접수가 마감되고, 남은 웨이팅이 모두 취소됩니다.')) return;
-    run('close', () => api(`/staff/stores/${store.id}/close-day`, { method: 'POST', body: {} }),
+    run('close', () => api(`/owner/stores/${store.id}/close-day`, { method: 'POST', body: {} }),
       r => `영업 종료: 남은 웨이팅 ${r.closedCount}건을 종료했습니다.`);
   };
 
   const deactivate = () => {
     if (!window.confirm(`'${store.name}' 매장을 닫을까요? 손님 목록에서 사라집니다. (기록은 보존됩니다)`)) return;
-    run('delete', () => api(`/staff/stores/${store.id}`, { method: 'DELETE' }), '매장을 닫았습니다.');
+    run('delete', () => api(`/owner/stores/${store.id}`, { method: 'DELETE' }), '매장을 닫았습니다.');
   };
 
   const active = waitings?.filter(w => w.status === 'WAITING' || w.status === 'CALLED') ?? [];
@@ -173,8 +173,8 @@ function StoreForm({ store, onSaved }) {
     try {
       const body = { name: form.name, address: form.address, maxParty: Number(form.maxParty) };
       const saved = store
-        ? await api(`/staff/stores/${store.id}`, { method: 'PATCH', body })
-        : await api('/staff/stores', { method: 'POST', body });
+        ? await api(`/owner/stores/${store.id}`, { method: 'PATCH', body })
+        : await api('/owner/stores', { method: 'POST', body });
       await onSaved(saved);
     } catch (err) {
       setError(err.message);

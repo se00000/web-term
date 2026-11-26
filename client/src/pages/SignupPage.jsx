@@ -2,8 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
+import { ACCOUNT, other } from '../accountTypes.js';
 
-export default function SignupPage() {
+/** type: 'customer' | 'owner' */
+export default function SignupPage({ type }) {
+  const acc = ACCOUNT[type];
+  const otherAcc = ACCOUNT[other(type)];
   const { login } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -17,9 +21,9 @@ export default function SignupPage() {
     setBusy(true);
     setError('');
     try {
-      await api('/auth/signup', { method: 'POST', body: form });
-      await login(form.email, form.password);
-      navigate('/', { replace: true });
+      await api(`/auth/${type}/signup`, { method: 'POST', body: form });
+      await login(type, form.email, form.password);
+      navigate(acc.homePath, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -28,10 +32,11 @@ export default function SignupPage() {
   }
 
   return (
-    <form className="card narrow" onSubmit={submit}>
-      <h1>회원가입</h1>
-      <p className="muted">손님 계정이 만들어집니다. 매장 직원 계정은 운영자가 발급합니다.</p>
-      <label>이름
+    <form className={`card narrow account-${type}`} onSubmit={submit}>
+      <span className="account-chip">{acc.label} 전용</span>
+      <h1>{acc.signupTitle}</h1>
+      <p className="muted">{acc.signupLead}</p>
+      <label>{type === 'owner' ? '대표자 이름' : '이름'}
         <input value={form.name} onChange={set('name')} maxLength={20} required />
       </label>
       <label>이메일
@@ -42,7 +47,10 @@ export default function SignupPage() {
       </label>
       {error && <p className="error">{error}</p>}
       <button className="primary" disabled={busy}>{busy ? '가입 중…' : '가입하기'}</button>
-      <p className="muted">이미 계정이 있나요? <Link to="/login">로그인</Link></p>
+      <p className="muted">이미 계정이 있나요? <Link to={acc.loginPath}>{acc.loginTitle}</Link></p>
+      <p className="switch-account">
+        {otherAcc.label}이신가요? <Link to={otherAcc.signupPath}>{otherAcc.signupTitle}</Link>
+      </p>
     </form>
   );
 }
