@@ -5,6 +5,8 @@ import LoginPage from './pages/LoginPage.jsx';
 import SignupPage from './pages/SignupPage.jsx';
 import StoreListPage from './pages/StoreListPage.jsx';
 import StoreDetailPage from './pages/StoreDetailPage.jsx';
+import RegionPage from './pages/RegionPage.jsx';
+import CategoryPage from './pages/CategoryPage.jsx';
 import MyWaitingPage from './pages/MyWaitingPage.jsx';
 import OwnerPage from './pages/OwnerPage.jsx';
 
@@ -36,8 +38,7 @@ export default function App() {
           <Link to={user?.role === 'OWNER' ? '/owner' : '/'} className="brand">
             줄서기{user?.role === 'OWNER' && <span className="brand-sub">사장님</span>}
           </Link>
-          <nav>
-            {user?.role !== 'OWNER' && <NavLink to="/" end>매장</NavLink>}
+          <nav aria-label="계정">
             {user?.role === 'CUSTOMER' && <NavLink to="/me">내 웨이팅</NavLink>}
             {user?.role === 'OWNER' && <NavLink to="/owner" end>매장 관리</NavLink>}
             {user
@@ -48,6 +49,17 @@ export default function App() {
                 </>}
           </nav>
         </div>
+
+        {/* 식당 찾기 메뉴 — 사장님 화면에서는 숨깁니다 */}
+        {user?.role !== 'OWNER' && (
+          <nav className="menubar" aria-label="식당 찾기">
+            <div className="menubar-inner">
+              <NavLink to="/" end>전체 매장</NavLink>
+              <NavLink to="/region">📍 지역으로 찾기</NavLink>
+              <NavLink to="/category">🍽️ 음식 종류로 찾기</NavLink>
+            </div>
+          </nav>
+        )}
       </header>
 
       <main className="container">
@@ -55,6 +67,8 @@ export default function App() {
         {notice && <div className="alert">{notice}</div>}
         <Routes>
           <Route path="/" element={<StoreListPage />} />
+          <Route path="/region" element={<RegionPage />} />
+          <Route path="/category" element={<CategoryPage />} />
           <Route path="/stores/:id" element={<StoreDetailPage />} />
           <Route path="/login" element={<LoginPage key="customer" type="customer" />} />
           <Route path="/signup" element={<SignupPage key="customer" type="customer" />} />

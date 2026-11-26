@@ -6,6 +6,7 @@ import { createAuth, requireRole } from './auth.js';
 import { createStoreService } from './services/store-service.js';
 import { createWaitingService } from './services/waiting-service.js';
 import { AppError, badInput, notFound } from './errors.js';
+import { CATEGORIES, SIDOS } from './catalog.js';
 
 // ---- 입력 검증 도우미 ----
 function id(value) {
@@ -28,6 +29,16 @@ function text(value, label, min, max) {
 function int(value, label, min, max) {
   if (!Number.isInteger(value) || value < min || value > max) throw badInput(`${label}은(는) ${min}~${max} 사이의 정수여야 합니다.`);
   return value;
+}
+function oneOf(value, label, list) {
+  if (!list.includes(value)) throw badInput(`${label} 값이 올바르지 않습니다.`);
+  return value;
+}
+/** 쿼리스트링의 선택 값: 없으면 undefined, 있으면 검증 */
+function optionalQuery(value, check) {
+  if (value === undefined || value === '') return undefined;
+  if (typeof value !== 'string') throw badInput();
+  return check(value);
 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -70,7 +81,21 @@ export function createApp({ db, secret, now = () => new Date() }) {
   app.get('/api/me', auth.required, (req, res) => res.json(req.user));
 
   // ---- 매장 (공개) ----
-  app.get('/api/stores', (_req, res) => res.json(stores.listPublic()));
+  // 메뉴(지역으로 찾기 / 음식 종류로 찾기)를 그릴 목록과 항목별 매장 수
+  app.get('/api/catalog', (_req, res) => res.json(stores.facets()));
+
+  // ?sido=전북&district=덕진구&category=한식&q=국밥 — 모두 선택
+  app.get('/api/stores', (req, res) => {
+    const allowed = ['sido', 'district', 'category', 'q'];
+    const extra = Object.keys(req.query).filter(k => !allowed.includes(k));
+    if (extra.length) throw badInput(`지원하지 않는 검색 조건입니다: ${extra.join(', ')}`);
+    res.json(stores.listPublic({
+      sido: optionalQuery(req.query.sido, v => oneOf(v, '지역', SIDOS)),
+      district: optionalQuery(req.query.district, v => text(v, '구·군', 1, 20)),
+      category: optionalQuery(req.query.category, v => oneOf(v, '음식 종류', CATEGORIES)),
+      q: optionalQuery(req.query.q, v => text(v, '검색어', 1, 40)),
+    }));
+  });
   app.get('/api/stores/:id', (req, res) => res.json(stores.getPublic(id(req.params.id))));
 
   // ---- 웨이팅 (손님) ----
@@ -89,18 +114,24 @@ export function createApp({ db, secret, now = () => new Date() }) {
   // ---- 매장 관리 (사장님) ----
   app.get('/api/owner/stores', ...ownerOnly, (req, res) => res.json(stores.listMine(req.user)));
   app.post('/api/owner/stores', ...ownerOnly, (req, res) => {
-    const b = body(req, ['name', 'address', 'maxParty']);
+    const b = body(req, ['name', 'address', 'sido', 'district', 'category', 'maxParty']);
     res.status(201).json(stores.create(req.user, {
       name: text(b.name, '매장 이름', 1, 40),
       address: text(b.address, '주소', 1, 100),
+      sido: oneOf(b.sido, '지역(시·도)', SIDOS),
+      district: text(b.district, '구·군', 1, 20),
+      category: oneOf(b.category, '음식 종류', CATEGORIES),
       maxParty: int(b.maxParty, '최대 인원', 1, 20),
     }));
   });
   app.patch('/api/owner/stores/:id', ...ownerOnly, (req, res) => {
-    const b = body(req, ['name', 'address', 'maxParty', 'isAccepting']);
+    const b = body(req, ['name', 'address', 'sido', 'district', 'category', 'maxParty', 'isAccepting']);
     const patch = {};
     if ('name' in b) patch.name = text(b.name, '매장 이름', 1, 40);
     if ('address' in b) patch.address = text(b.address, '주소', 1, 100);
+    if ('sido' in b) patch.sido = oneOf(b.sido, '지역(시·도)', SIDOS);
+    if ('district' in b) patch.district = text(b.district, '구·군', 1, 20);
+    if ('category' in b) patch.category = oneOf(b.category, '음식 종류', CATEGORIES);
     if ('maxParty' in b) patch.maxParty = int(b.maxParty, '최대 인원', 1, 20);
     if ('isAccepting' in b) {
       if (typeof b.isAccepting !== 'boolean') throw badInput('isAccepting은 true/false여야 합니다.');

@@ -13,7 +13,7 @@ test('매장 목록은 로그인 없이 조회되고 대기 팀 수가 보인다
 
 test('사장님은 매장을 등록·수정하고, 다른 사장님의 매장은 수정할 수 없다', async t => {
   const f = await fixture(t);
-  const created = await f.request('/api/owner/stores', { token: f.ownerA, method: 'POST', body: { name: '새 매장', address: '주소', maxParty: 3 } });
+  const created = await f.request('/api/owner/stores', { token: f.ownerA, method: 'POST', body: { name: '새 매장', address: '주소', sido: '전북', district: '덕진구', category: '한식', maxParty: 3 } });
   assert.equal(created.status, 201);
   assert.equal(created.data.isAccepting, false);
 
@@ -27,7 +27,7 @@ test('사장님은 매장을 등록·수정하고, 다른 사장님의 매장은
 test('손님은 매장을 등록할 수 없다', async t => {
   const f = await fixture(t);
   const c = await f.customer('notowner');
-  const r = await f.request('/api/owner/stores', { token: c.token, method: 'POST', body: { name: 'x', address: 'y', maxParty: 2 } });
+  const r = await f.request('/api/owner/stores', { token: c.token, method: 'POST', body: { name: 'x', address: 'y', sido: '서울', district: '강남구', category: '한식', maxParty: 2 } });
   assert.equal(r.status, 403);
 });
 

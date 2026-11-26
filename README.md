@@ -50,6 +50,17 @@
 - 상태: `WAITING → CALLED → SEATED`, `WAITING/CALLED → CANCELLED`, `CALLED → NO_SHOW`. 종료 상태(SEATED·CANCELLED·NO_SHOW)는 변경할 수 없습니다.
 - 매장 삭제는 이력 보존을 위해 **비활성화**로 처리하며, 진행 중 웨이팅이 있으면 거절합니다.
 
+## 식당 찾기
+
+상단 메뉴바에서 **전체 매장 / 지역으로 찾기 / 음식 종류로 찾기**를 고릅니다. (사장님 화면에서는 숨김)
+
+- 매장마다 **시·도**(17개 고정 목록), **구·군**(자유 입력), **음식 종류**(12개 고정 목록)를 가집니다. 목록은 [src/catalog.js](src/catalog.js) 한곳에 있고, 화면은 `GET /api/catalog`로 받아 메뉴를 그립니다.
+- 지역으로 찾기: 시·도 → 구·군 → 매장 목록. 음식 종류로 찾기: 종류 → (선택) 지역으로 좁히기.
+- 고른 조건은 주소(`/region?sido=전북&district=덕진구`)에 남아 새로고침·뒤로 가기·링크 공유에도 유지됩니다.
+- 메뉴 옆 숫자는 영업 중인 매장 수이고, 매장이 없는 항목은 흐리게 표시됩니다.
+- 서버는 목록에 없는 지역·종류, 지원하지 않는 검색 조건을 400으로 거절합니다. 검색어의 `%`, `_`는 글자 그대로 찾습니다.
+- 이 컬럼이 없던 예전 DB는 서버가 열 때 자동으로 컬럼을 추가합니다(기본값 전북 / 기타).
+
 ## 실행 방법
 
 Node.js **24.x**가 필요합니다.
@@ -75,7 +86,9 @@ npm run client:dev        # http://localhost:5173
 
 | 화면 | 경로 | 대상 |
 |---|---|---|
-| 매장 목록 (대기 팀 수 10초 갱신) | `/` | 누구나 |
+| 전체 매장 + 이름·주소 검색 (대기 팀 수 10초 갱신) | `/` | 누구나 |
+| 지역으로 찾기 (시·도 → 구·군) | `/region` | 누구나 |
+| 음식 종류로 찾기 (종류 → 지역) | `/category` | 누구나 |
 | 매장 상세 · 웨이팅 등록 | `/stores/:id` | 손님 |
 | 내 웨이팅 번호표 (내 앞 팀 수 5초 갱신, 취소) | `/me` | 손님 |
 | 손님 로그인 · 회원가입 | `/login`, `/signup` | 손님 |
@@ -119,6 +132,7 @@ npm test
 | 로그인 분리 | 손님·사장님 가입 각각 성공, 다른 종류 로그인 403(토큰 미발급), 틀린 비밀번호는 종류와 무관하게 401, 본문 role 주입 거절, 이메일 중복 409 |
 | 권한 | 남의 웨이팅 취소, 손님의 호출, 다른 사장님의 호출·목록 조회, 사장님의 웨이팅 등록 |
 | 트랜잭션 | 노쇼 처리 중 다음 순번 호출 실패 → 노쇼·이력까지 전부 롤백 |
+| 식당 찾기 | 시·도 / 시·도+구·군 / 음식 종류 / 종류+지역 필터, 검색어 특수문자 처리, 잘못된 값 400, 메뉴용 매장 수(닫은 매장 제외), 매장 등록 시 지역·종류 필수, 예전 DB 자동 컬럼 추가 |
 | 기타 | 노쇼 누적 제한과 해제, 영업 종료 일괄 처리, 지난 영업일 웨이팅 자동 만료, 매장 비활성화 |
 
 ## API 요약
@@ -128,7 +142,8 @@ npm test
 | POST | `/api/auth/customer/signup`, `/api/auth/customer/login` | 공개 (손님) |
 | POST | `/api/auth/owner/signup`, `/api/auth/owner/login` | 공개 (사장님) |
 | GET | `/api/me` | 로그인 |
-| GET | `/api/stores`, `/api/stores/:id` | 공개 |
+| GET | `/api/catalog` (지역·음식 종류 목록과 매장 수) | 공개 |
+| GET | `/api/stores?sido=&district=&category=&q=` (모두 선택), `/api/stores/:id` | 공개 |
 | POST | `/api/stores/:id/waitings` `{partySize}` | 손님 |
 | GET | `/api/me/waiting` | 로그인 |
 | POST | `/api/waitings/:id/cancel` | 본인 |
@@ -150,13 +165,15 @@ src/
   db.js                     스키마, 트랜잭션 도우미(BEGIN IMMEDIATE)
   time.js                   한국 시간 영업일 계산
   services/waiting-service.js  웨이팅 업무 규칙
-  services/store-service.js    매장 관리
+  catalog.js                시·도·음식 종류 고정 목록
+  services/store-service.js    매장 관리·검색
 scripts/  seed.js, reset-db.js
 tests/    auth, store, waiting 테스트
 client/
   src/api.js                API 호출·토큰 보관·오류 처리
   src/auth.jsx              로그인 상태 (토큰 만료 시 자동 로그아웃)
   src/accountTypes.js       손님/사장님 화면 문구·경로
+  src/components/StoreCards.jsx  매장 카드 목록 (전체·지역·음식 종류 화면 공통)
   src/hooks.js              주기적 갱신(polling)
   src/pages/                화면별 컴포넌트
 ```

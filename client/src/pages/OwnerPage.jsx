@@ -89,7 +89,7 @@ function StoreDashboard({ store, onStoreChanged }) {
         <div className="row-between">
           <div>
             <h2>{store.name}</h2>
-            <p className="muted small">{store.address} · 최대 {store.maxParty}명</p>
+            <p className="muted small">{store.category} · {store.sido} {store.district} · {store.address} · 최대 {store.maxParty}명</p>
           </div>
           <span className={store.isAccepting ? 'badge ok' : 'badge off'}>{store.isAccepting ? '접수 중' : '접수 마감'}</span>
         </div>
@@ -161,9 +161,17 @@ function StoreDashboard({ store, onStoreChanged }) {
 }
 
 function StoreForm({ store, onSaved }) {
-  const [form, setForm] = useState({ name: store?.name ?? '', address: store?.address ?? '', maxParty: store?.maxParty ?? 4 });
+  const [form, setForm] = useState({
+    name: store?.name ?? '',
+    address: store?.address ?? '',
+    sido: store?.sido ?? '',
+    district: store?.district ?? '',
+    category: store?.category ?? '',
+    maxParty: store?.maxParty ?? 4,
+  });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const { data: catalog } = usePolling(() => api('/catalog'), 0);
   const set = key => e => setForm({ ...form, [key]: e.target.value });
 
   async function submit(e) {
@@ -171,7 +179,11 @@ function StoreForm({ store, onSaved }) {
     setBusy(true);
     setError('');
     try {
-      const body = { name: form.name, address: form.address, maxParty: Number(form.maxParty) };
+      const body = {
+        name: form.name, address: form.address,
+        sido: form.sido, district: form.district, category: form.category,
+        maxParty: Number(form.maxParty),
+      };
       const saved = store
         ? await api(`/owner/stores/${store.id}`, { method: 'PATCH', body })
         : await api('/owner/stores', { method: 'POST', body });
@@ -187,7 +199,22 @@ function StoreForm({ store, onSaved }) {
     <form className={store ? 'subform' : 'card'} onSubmit={submit}>
       {!store && <h2>새 매장 등록</h2>}
       <label>매장 이름<input value={form.name} onChange={set('name')} maxLength={40} required /></label>
-      <label>주소<input value={form.address} onChange={set('address')} maxLength={100} required /></label>
+      <label>음식 종류
+        <select value={form.category} onChange={set('category')} required>
+          <option value="" disabled>선택하세요</option>
+          {catalog?.categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+        </select>
+      </label>
+      <div className="form-row">
+        <label>시·도
+          <select value={form.sido} onChange={set('sido')} required>
+            <option value="" disabled>선택</option>
+            {catalog?.sidos.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+          </select>
+        </label>
+        <label>구·군<input value={form.district} onChange={set('district')} maxLength={20} placeholder="예: 덕진구" required /></label>
+      </div>
+      <label>상세 주소<input value={form.address} onChange={set('address')} maxLength={100} required /></label>
       <label>최대 인원 (1~20)<input type="number" min={1} max={20} value={form.maxParty} onChange={set('maxParty')} required /></label>
       {error && <p className="error">{error}</p>}
       <button className="primary" disabled={busy}>{busy ? '저장 중…' : '저장'}</button>

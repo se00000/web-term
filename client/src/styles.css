@@ -169,3 +169,72 @@ nav a.owner-link { color: var(--owner); font-weight: 600; }
 .topbar-owner { border-bottom: 3px solid var(--owner); }
 .topbar-owner .brand { color: var(--owner); }
 .brand-sub { font-size: 0.75rem; font-weight: 700; margin-left: 0.4rem; padding: 0.1rem 0.45rem; border-radius: 6px; background: var(--owner-soft); color: var(--owner); vertical-align: middle; }
+
+/* ---- 식당 찾기 메뉴바 ---- */
+.menubar { display: block; border-top: 1px solid var(--line); }
+.menubar-inner {
+  max-width: 760px; margin: 0 auto; padding: 0 16px;
+  display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none;
+}
+.menubar-inner::-webkit-scrollbar { display: none; }
+.menubar a {
+  flex: 0 0 auto; padding: 0.7rem 0.85rem; color: var(--muted); text-decoration: none;
+  font-weight: 600; font-size: 0.95rem; border-bottom: 3px solid transparent; white-space: nowrap;
+}
+.menubar a:hover { color: var(--text); }
+.menubar a.active { color: var(--brand); border-bottom-color: var(--brand); background: none; border-radius: 0; }
+
+/* ---- 검색 ---- */
+.search-bar { display: flex; gap: 0.5rem; margin: 0.75rem 0; }
+.search-bar input { margin: 0; flex: 1; }
+.quick-links { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.quick-link {
+  flex: 1; min-width: 140px; text-align: center; padding: 0.8rem; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--line); color: var(--text); text-decoration: none; font-weight: 600;
+}
+.quick-link:hover { border-color: var(--brand); }
+.result-head { margin: 0.25rem 0 0.75rem; color: var(--muted); }
+.result-head b { color: var(--text); }
+.result-head .link { color: var(--brand); margin-left: 0.5rem; padding: 0; }
+
+/* ---- 칩 (시·도, 구·군) ---- */
+.step-title { font-size: 0.9rem; color: var(--muted); margin: 0.25rem 0 0.6rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+.chip {
+  padding: 0.4rem 0.75rem; border-radius: 999px; font-weight: 600; font-size: 0.92rem;
+  background: var(--bg); border: 1px solid var(--line);
+}
+.chip.active { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.chip-count { margin-left: 0.3rem; font-size: 0.78rem; font-weight: 700; opacity: 0.65; }
+
+/* ---- 음식 종류 타일 ---- */
+.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+.category-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.8rem 0.4rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.category-tile.active { border-color: var(--brand); background: var(--brand-soft); }
+.category-icon { font-size: 1.8rem; line-height: 1.2; }
+.category-name { font-size: 0.9rem; }
+.inline-select { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-weight: 600; }
+.inline-select select { margin: 0; width: auto; padding: 0.35rem 0.5rem; }
+
+/* ---- 매장 카드 보강 ---- */
+.store-card { align-items: center; }
+.store-icon { font-size: 1.8rem; width: 3rem; height: 3rem; flex: 0 0 auto; display: grid; place-items: center; background: var(--bg); border-radius: 12px; }
+.store-main { flex: 1; min-width: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.2rem 0; }
+.tag { font-size: 0.78rem; padding: 0.12rem 0.5rem; border-radius: 6px; background: var(--bg); color: var(--muted); text-decoration: none; }
+a.tag:hover { color: var(--brand); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+button.back { padding: 0; color: var(--muted); }
+
+@media (max-width: 520px) {
+  .store-card { flex-wrap: wrap; }
+  .store-meta { flex-direction: row; width: 100%; justify-content: space-between; align-items: center; }
+}
+
+@media (max-width: 520px) {
+  .menubar-inner { gap: 0; padding: 0 8px; }
+  .menubar a { flex: 1 1 auto; text-align: center; padding: 0.65rem 0.25rem; font-size: 0.85rem; }
+}

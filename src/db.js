@@ -2,12 +2,20 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CATEGORIES, SIDOS, sqlIn } from './catalog.js';
 
 export const defaultDbPath = fileURLToPath(new URL('../data/app.sqlite', import.meta.url));
 
 export const WAITING_STATUSES = ['WAITING', 'CALLED', 'SEATED', 'CANCELLED', 'NO_SHOW'];
 export const ACTIVE_STATUSES = ['WAITING', 'CALLED'];
 const statusCheck = `IN (${WAITING_STATUSES.map(s => `'${s}'`).join(',')})`;
+
+// 지역·음식 종류 컬럼. 이 컬럼이 생기기 전에 만든 DB에는 openDb가 ALTER TABLE로 추가합니다.
+const STORE_EXTRA_COLUMNS = [
+  ['sido', `TEXT NOT NULL DEFAULT '전북' CHECK (sido ${sqlIn(SIDOS)})`],
+  ['district', `TEXT NOT NULL DEFAULT ''`],
+  ['category', `TEXT NOT NULL DEFAULT '기타' CHECK (category ${sqlIn(CATEGORIES)})`],
+];
 
 const schema = `
 CREATE TABLE IF NOT EXISTS users (
@@ -29,8 +37,12 @@ CREATE TABLE IF NOT EXISTS stores (
   max_party    INTEGER NOT NULL CHECK (max_party BETWEEN 1 AND 20),
   is_accepting INTEGER NOT NULL DEFAULT 0 CHECK (is_accepting IN (0,1)),
   is_active    INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0,1)),
-  created_at   TEXT NOT NULL
+  created_at   TEXT NOT NULL,
+  ${STORE_EXTRA_COLUMNS.map(([name, def]) => `${name} ${def}`).join(',\n  ')}
 );
+
+CREATE INDEX IF NOT EXISTS ix_stores_region   ON stores(sido, district);
+CREATE INDEX IF NOT EXISTS ix_stores_category ON stores(category);
 
 CREATE TABLE IF NOT EXISTS waitings (
   id           INTEGER PRIMARY KEY,
@@ -69,8 +81,18 @@ export function openDb(path = process.env.DB_PATH || defaultDbPath) {
   if (path !== ':memory:') mkdirSync(dirname(resolve(path)), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
+  migrateStores(db);
   db.exec(schema);
   return db;
+}
+
+/** 예전 스키마의 stores 테이블에 없는 컬럼을 추가합니다. (테이블이 아직 없으면 아무것도 하지 않음) */
+function migrateStores(db) {
+  const cols = db.prepare('PRAGMA table_info(stores)').all().map(c => c.name);
+  if (cols.length === 0) return;
+  for (const [name, def] of STORE_EXTRA_COLUMNS) {
+    if (!cols.includes(name)) db.exec(`ALTER TABLE stores ADD COLUMN ${name} ${def}`);
+  }
 }
 
 /**

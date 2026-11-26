@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { usePolling } from '../hooks.js';
+import { categoryIcon } from '../catalogIcons.js';
 
 export default function StoreDetailPage() {
   const { id } = useParams();
@@ -33,8 +34,15 @@ export default function StoreDetailPage() {
 
   return (
     <section>
-      <Link to="/" className="back">← 매장 목록</Link>
+      {/* 지역·음식 종류 화면에서 들어왔으면 그 화면(검색 조건 포함)으로 돌아갑니다 */}
+      <button type="button" className="link back" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}>← 뒤로</button>
       <div className="card">
+        <p className="tags">
+          <Link to={`/category?category=${encodeURIComponent(store.category)}`} className="tag">{categoryIcon(store.category)} {store.category}</Link>
+          <Link to={`/region?sido=${encodeURIComponent(store.sido)}${store.district ? `&district=${encodeURIComponent(store.district)}` : ''}`} className="tag">
+            📍 {store.sido}{store.district && ` ${store.district}`}
+          </Link>
+        </p>
         <h1>{store.name}</h1>
         <p className="muted">{store.address}</p>
         <div className="stat-row">
